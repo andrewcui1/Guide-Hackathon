@@ -74,7 +74,9 @@ def handle_sms(request):
         messages = client.beta.threads.messages.list(thread_id=thread_id)
         # print(f"after openai.Message.list - {messages}")
         assistant_response = messages.data[-1].content if messages.data else "Sorry, I couldn't process your request."
+        response_text = assistant_response[0]['text']['value'] if assistant_response and 'text' in assistant_response[0] else "Sorry, I couldn't process your request."
         print("ASSISTANT", assistant_response[0])
+        print(f"assistant_response - {response_text}")  
         # print(f"assistant_response - {assistant_response}")
 
         # Log the message in Firestore under "Messages"
