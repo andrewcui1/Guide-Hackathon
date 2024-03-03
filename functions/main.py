@@ -105,13 +105,13 @@ def handle_sms(request):
         print(f"after error_log_ref.add")
         
         # Prepare an error message response
-        assistant_response = "We're sorry, there was an error processing your request."
+        response_text = "We're sorry, there was an error processing your request."
 
     # Prepare the Twilio SMS response with either the assistant's response or an error message
     twiml_response = MessagingResponse()
     print(f"before twiml_response.message")
     print(f"twiml_response.message - {twiml_response.message}")
-    twiml_response.message(assistant_response)
+    twiml_response.message(response_text)
     print(f"after twiml_response.message")
 
     return str(twiml_response), 200
