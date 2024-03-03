@@ -1,47 +1,89 @@
-# Welcome to Cloud Functions for Firebase for Python!
-# To get started, simply uncomment the below code or create your own.
-# Deploy with `firebase deploy`
+import os
+import firebase_admin
+from firebase_admin import credentials, firestore, initialize_app
+import functions_framework
+from twilio.twiml.messaging_response import MessagingResponse
+import openai
 
-from firebase_functions import https_fn
-from firebase_admin import initialize_app
-from dotenv import load_dotenv
-load_dotenv()
+# Initialize Firebase Admin SDK
+firebase_admin.initialize_app()
 
-from openai import OpenAI
-client = OpenAI()
+# OpenAI setup
+openai.api_key = os.environ.get("OPENAI_API_KEY")
 
-instructions_str = f"""You are Pratik Patel. Uploaded is a health assessment that you're using to understand a client. Note that you're not a MD or formally diagnosing/prescribing to any clients.
+# Assuming the assistant is already created and its ID is known
+ASSISTANT_ID = "your_assistant_id"
 
-Don't provide any health plans yet. Make the intake very engaging for the user. The goal is to guide them through a self-discovery process, while keeping them entertained. The user is to gain insight into why they are experiencing the issues they are and why previous solutions have failed.
+@functions_framework.http
+def handle_sms(request):
+    # Ensure the request is from Twilio
+    if request.method != 'POST':
+        return "Only POST requests are accepted", 405
 
-1. The goal is to identify a high impact area for the client (weight loss/gain, gut health, stress/energy). Please ask this question first.
+    request_form = request.form
+    from_number = request_form.get('From')
+    sms_body = request_form.get('Body')
+    db = firestore.client()
 
-2. Use the health assessment document to create an interactive conversational experience tailored to which area the user wants to explore first. You don't need to ask every single question, or ask in the order of the document. 
+    try:
+        # Retrieve or create a user document in Firestore
+        users_ref = db.collection('Users')
+        user_doc = users_ref.document(from_number).get()
 
-3. Continue asking the user questions after each round of responses in perpetuity. We want to get a very detailed view of the client. 
+        if user_doc.exists:
+            user_data = user_doc.to_dict()
+            thread_id = user_data['open_ai_assistant_thread_id']
+        else:
+            # If the user is new, create a new thread
+            thread = openai.Thread.create(assistant_id=ASSISTANT_ID)
+            thread_id = thread.id
+            users_ref.document(from_number).set({
+                'phone_number': from_number,
+                'created_tsp': firestore.SERVER_TIMESTAMP,
+                'open_ai_assistant_thread_id': thread_id
+            })
 
-Here is some information about the coach you are playing:
-"""
+        # Add the user's message to the thread
+        openai.Message.create(
+            thread_id=thread_id,
+            role="user",
+            content=sms_body
+        )
 
+        # Run the assistant to get a response
+        run = openai.Run.create(
+            thread_id=thread_id,
+            assistant_id=ASSISTANT_ID
+        )
 
-my_assistant = client.beta.assistants.create(
-    instructions=instructions_str,
-    name="Personal Health Coach",
-    tools=[{"type": "retrieval"}],
-    model="gpt-4-turbo-preview"
-)
-print(my_assistant)
+        # Assuming the response is synchronous and the last message is from the assistant
+        messages = openai.Message.list(thread_id=thread_id)
+        assistant_response = messages.data[-1].content if messages.data else "Sorry, I couldn't process your request."
 
+        # Log the message in Firestore under "Messages"
+        messages_ref = db.collection('Messages')
+        messages_ref.add({
+            'to_phone_number': os.environ.get("TWILIO_PHONE_NUMBER"),
+            'from_phone_number': from_number,
+            'content': sms_body,  # Log the user's message
+            'sent_tsp': firestore.SERVER_TIMESTAMP
+        })
 
+    except Exception as e:
+        # Error handling: Log the exception in Firestore
+        error_log_ref = db.collection('ErrorLogs')
+        error_log_ref.add({
+            'error': str(e),
+            'from_phone_number': from_number,
+            'to_phone_number': os.environ.get("TWILIO_PHONE_NUMBER", "Unknown"),
+            'timestamp': firestore.SERVER_TIMESTAMP
+        })
+        
+        # Prepare an error message response
+        assistant_response = "We're sorry, there was an error processing your request."
 
+    # Prepare the Twilio SMS response with either the assistant's response or an error message
+    twiml_response = MessagingResponse()
+    twiml_response.message(assistant_response)
 
-
-
-
-
-# initialize_app()
-#
-#
-# @https_fn.on_request()
-# def on_request_example(req: https_fn.Request) -> https_fn.Response:
-#     return https_fn.Response("Hello world!")
+    return str(twiml_response), 200
