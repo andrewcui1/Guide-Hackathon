@@ -4,6 +4,7 @@ from firebase_admin import credentials, firestore, initialize_app
 import functions_framework
 from twilio.twiml.messaging_response import MessagingResponse
 import openai
+from openai import OpenAI
 
 # Initialize Firebase Admin SDK
 firebase_admin.initialize_app()
@@ -12,7 +13,7 @@ firebase_admin.initialize_app()
 openai.api_key = os.environ.get("OPENAI_API_KEY")
 
 # Assuming the assistant is already created and its ID is known
-ASSISTANT_ID = "your_assistant_id"
+ASSISTANT_ID = "asst_OQTVP3y0yBqzsUtyOl5HmiHY"
 
 @functions_framework.http
 def handle_sms(request):
