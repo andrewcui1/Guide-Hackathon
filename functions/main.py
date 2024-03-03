@@ -16,6 +16,7 @@ ASSISTANT_ID = "your_assistant_id"
 
 @functions_framework.http
 def handle_sms(request):
+    print(request.method)
     # Ensure the request is from Twilio
     if request.method != 'POST':
         return "Only POST requests are accepted", 405
@@ -25,15 +26,21 @@ def handle_sms(request):
     sms_body = request_form.get('Body')
     db = firestore.client()
 
+    print(f"Received message from {from_number}: {sms_body}")
+    print(f"Twilio request form: {request_form}")
+    print("before try")
     try:
         # Retrieve or create a user document in Firestore
         users_ref = db.collection('Users')
         user_doc = users_ref.document(from_number).get()
 
+        print("after user_doc")
         if user_doc.exists:
+            print("user_doc exists")
             user_data = user_doc.to_dict()
             thread_id = user_data['open_ai_assistant_thread_id']
         else:
+            print("user_doc does not exist")
             # If the user is new, create a new thread
             thread = openai.Thread.create(assistant_id=ASSISTANT_ID)
             thread_id = thread.id
@@ -43,12 +50,14 @@ def handle_sms(request):
                 'open_ai_assistant_thread_id': thread_id
             })
 
+        print("before openai.Message.create")
         # Add the user's message to the thread
         openai.Message.create(
             thread_id=thread_id,
             role="user",
             content=sms_body
         )
+        print("after openai.Message.create")
 
         # Run the assistant to get a response
         run = openai.Run.create(
