@@ -26,6 +26,7 @@ def handle_sms(request):
     from_number = request_form.get('From')
     sms_body = request_form.get('Body')
     db = firestore.client()
+    client = OpenAI()
 
     print(f"Received message from {from_number}: {sms_body}")
     print(f"Twilio request form: {request_form}")
@@ -43,7 +44,7 @@ def handle_sms(request):
         else:
             print("user_doc does not exist")
             # If the user is new, create a new thread
-            thread = openai.Thread.create(assistant_id=ASSISTANT_ID)
+            thread = client.beta.threads.create()
             thread_id = thread.id
             users_ref.document(from_number).set({
                 'phone_number': from_number,
@@ -53,7 +54,8 @@ def handle_sms(request):
 
         print("before openai.Message.create")
         # Add the user's message to the thread
-        openai.Message.create(
+
+        message = client.beta.threads.messages.create(
             thread_id=thread_id,
             role="user",
             content=sms_body
@@ -61,7 +63,7 @@ def handle_sms(request):
         print("after openai.Message.create")
 
         # Run the assistant to get a response
-        run = openai.Run.create(
+        run = client.beta.threads.runs.create(
             thread_id=thread_id,
             assistant_id=ASSISTANT_ID
         )
