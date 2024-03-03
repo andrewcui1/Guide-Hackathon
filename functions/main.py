@@ -6,11 +6,12 @@ from twilio.twiml.messaging_response import MessagingResponse
 import openai
 from openai import OpenAI
 
-# Initialize Firebase Admin SDK
-firebase_admin.initialize_app()
 
 # OpenAI setup
 openai.api_key = os.environ.get("OPENAI_API_KEY")
+
+cred = credentials.Certificate('../healthcoachchat-firebase-adminsdk-a1j13-a255bd5b57.json')
+firebase_admin.initialize_app(cred)
 
 # Assuming the assistant is already created and its ID is known
 ASSISTANT_ID = "asst_OQTVP3y0yBqzsUtyOl5HmiHY"
@@ -71,9 +72,10 @@ def handle_sms(request):
 
         # Assuming the response is synchronous and the last message is from the assistant
         messages = client.beta.threads.messages.list(thread_id=thread_id)
-        print(f"after openai.Message.list - {messages}")
+        # print(f"after openai.Message.list - {messages}")
         assistant_response = messages.data[-1].content if messages.data else "Sorry, I couldn't process your request."
-        print(f"assistant_response - {assistant_response}")
+        print("ASSISTANT", assistant_response[0])
+        # print(f"assistant_response - {assistant_response}")
 
         # Log the message in Firestore under "Messages"
         messages_ref = db.collection('Messages')
@@ -109,6 +111,5 @@ def handle_sms(request):
     print(f"twiml_response.message - {twiml_response.message}")
     twiml_response.message(assistant_response)
     print(f"after twiml_response.message")
-    print(f"twiml_response - {twiml_response}")
 
     return str(twiml_response), 200
