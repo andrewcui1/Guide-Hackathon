@@ -67,35 +67,48 @@ def handle_sms(request):
             thread_id=thread_id,
             assistant_id=ASSISTANT_ID
         )
+        print("after client.beta.threads.runs.create")
 
         # Assuming the response is synchronous and the last message is from the assistant
-        messages = openai.Message.list(thread_id=thread_id)
+        messages = client.beta.threads.messages.list(thread_id=thread_id)
+        print(f"after openai.Message.list - {messages}")
         assistant_response = messages.data[-1].content if messages.data else "Sorry, I couldn't process your request."
+        print(f"assistant_response - {assistant_response}")
 
         # Log the message in Firestore under "Messages"
         messages_ref = db.collection('Messages')
+        print(f"before messages_ref.add")
         messages_ref.add({
             'to_phone_number': os.environ.get("TWILIO_PHONE_NUMBER"),
             'from_phone_number': from_number,
             'content': sms_body,  # Log the user's message
             'sent_tsp': firestore.SERVER_TIMESTAMP
         })
+        print(f"after messages_ref.add")
 
     except Exception as e:
+        print(f"Error: {e}")
+        print(f"in except")
         # Error handling: Log the exception in Firestore
         error_log_ref = db.collection('ErrorLogs')
+        print(f"before error_log_ref.add")
         error_log_ref.add({
             'error': str(e),
             'from_phone_number': from_number,
             'to_phone_number': os.environ.get("TWILIO_PHONE_NUMBER", "Unknown"),
             'timestamp': firestore.SERVER_TIMESTAMP
         })
+        print(f"after error_log_ref.add")
         
         # Prepare an error message response
         assistant_response = "We're sorry, there was an error processing your request."
 
     # Prepare the Twilio SMS response with either the assistant's response or an error message
     twiml_response = MessagingResponse()
+    print(f"before twiml_response.message")
+    print(f"twiml_response.message - {twiml_response.message}")
     twiml_response.message(assistant_response)
+    print(f"after twiml_response.message")
+    print(f"twiml_response - {twiml_response}")
 
     return str(twiml_response), 200
