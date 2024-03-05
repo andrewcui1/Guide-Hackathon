@@ -1,6 +1,7 @@
 import os
 import firebase_admin
 from firebase_admin import credentials, firestore, initialize_app
+from firebase_functions import firestore_fn, https_fn
 import functions_framework
 from twilio.twiml.messaging_response import MessagingResponse
 import openai
@@ -11,12 +12,13 @@ from openai import OpenAI
 openai.api_key = os.environ.get("OPENAI_API_KEY")
 
 cred = credentials.Certificate('../healthcoachchat-firebase-adminsdk-a1j13-a255bd5b57.json')
-firebase_admin.initialize_app(cred)
+app = firebase_admin.initialize_app(cred)
 
 # Assuming the assistant is already created and its ID is known
 ASSISTANT_ID = "asst_OQTVP3y0yBqzsUtyOl5HmiHY"
 
-@functions_framework.http
+# @functions_framework.http
+@https_fn.on_request()
 def handle_sms(request):
     print(request.method)
     # Ensure the request is from Twilio

@@ -1,0 +1,36 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: An AWS Serverless Specification template for a Twilio webhook.
+
+Globals:
+  Function:
+    Timeout: 10
+    Runtime: python3.8
+
+Resources:
+  TwilioWebhookFunction:
+    Type: AWS::Serverless::Function 
+    Properties:
+      Handler: lambda_function.lambda_handler
+      CodeUri: .
+      Description: A Lambda function that serves as a webhook for Twilio SMS messages.
+      Events:
+        TwilioWebhook:
+          Type: Api 
+          Properties:
+            Path: /twilio/webhook
+            Method: POST
+      Environment:
+        Variables:
+          OPENAI_API_KEY: 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
+
+Outputs:
+  WebhookApi:
+    Description: "API Gateway endpoint URL for Twilio webhook"
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/twilio/webhook"
+  TwilioWebhookFunction:
+    Description: "Twilio Webhook Lambda Function ARN"
+    Value: !GetAtt TwilioWebhookFunction.Arn
+  TwilioWebhookFunctionIamRole:
+    Description: "Implicit IAM Role created for Twilio webhook function"
+    Value: !GetAtt TwilioWebhookFunctionRole.Arn
