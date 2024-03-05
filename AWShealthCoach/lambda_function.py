@@ -52,114 +52,108 @@ def lambda_handler(event, context):
     client = openai.OpenAI()
     print(f"OpenAI client: {client}")
 
-    try:
-        print("Before user_response")
-        # Check if user exists in DynamoDB
-        user_response = users_table.get_item(Key={'phone_number': from_number})
-        print(f"User response: {user_response}")
-        user_exists = 'Item' in user_response
-        print(f"User exists: {user_exists}")
 
-        if user_exists:
-            print("User exists")
-            user_data = user_response['Item']
-            print(f"User data: {user_data}")
-            thread_id = user_data['open_ai_assistant_thread_id']
-            print(f"Thread ID: {thread_id}")
-        else:
-            print("User does not exist")
-            # If the user is new, create a new thread and save to DynamoDB
-            thread = client.beta.threads.create()
-            print(f"Thread: {thread}")
-            thread_id = thread.id
-            print(f"Thread ID: {thread_id}")
-            users_table.put_item(Item={
-                'phone_number': from_number,
-                'open_ai_assistant_thread_id': thread_id,
-                'created_tsp': int(time.time())
-            })
+    if sms_body == "RESET":
+        # Handle the RESET command: create a new thread
+        new_thread = client.beta.threads.create()
+        thread_id = new_thread.id
 
-        message = client.beta.threads.messages.create(
-            thread_id=thread_id,
-            role="user",
-            content=sms_body
+        # Update the user's thread ID in DynamoDB
+        response = users_table.update_item(
+            Key={'phone_number': from_number},
+            UpdateExpression="set open_ai_assistant_thread_id = :t",
+            ExpressionAttributeValues={
+                ':t': thread_id,
+            },
+            ReturnValues="UPDATED_NEW"
         )
-        print("after openai.Message.create")
-        print(f"Message: {message}")
-        print(f"Message content: {message.content}")
+        response_text = "Your conversation has been reset. Let's start fresh!"
 
-        # Run the assistant to get a response
-        run = client.beta.threads.runs.create(
-            thread_id=thread_id,
-            assistant_id=assisstant_id
-        )
-        print("after client.beta.threads.runs.create")
+    else:
+        try:
+            print("Before user_response")
+            # Check if user exists in DynamoDB
+            user_response = users_table.get_item(Key={'phone_number': from_number})
+            print(f"User response: {user_response}")
+            user_exists = 'Item' in user_response
+            print(f"User exists: {user_exists}")
 
-        print(f"Run: {run}")
+            if user_exists:
+                print("User exists")
+                user_data = user_response['Item']
+                print(f"User data: {user_data}")
+                thread_id = user_data['open_ai_assistant_thread_id']
+                print(f"Thread ID: {thread_id}")
+            else:
+                print("User does not exist")
+                # If the user is new, create a new thread and save to DynamoDB
+                thread = client.beta.threads.create()
+                print(f"Thread: {thread}")
+                thread_id = thread.id
+                print(f"Thread ID: {thread_id}")
+                users_table.put_item(Item={
+                    'phone_number': from_number,
+                    'open_ai_assistant_thread_id': thread_id,
+                    'created_tsp': int(time.time())
+                })
 
-        # Introduce a delay to allow time for the assistant's response to be generated
-        time.sleep(20)  # Adjust the sleep time as needed
+            message = client.beta.threads.messages.create(
+                thread_id=thread_id,
+                role="user",
+                content=sms_body
+            )
+            print("after openai.Message.create")
+            print(f"Message: {message}")
+            print(f"Message content: {message.content}")
+
+            # Run the assistant to get a response
+            run = client.beta.threads.runs.create(
+                thread_id=thread_id,
+                assistant_id=assisstant_id
+            )
+            print("after client.beta.threads.runs.create")
 
 
-        messages = client.beta.threads.messages.list(thread_id=thread_id)
-        print(f"Messages: {messages}")
+            # Introduce a delay to allow time for the assistant's response to be generated
+            time.sleep(10)  # Adjust the sleep time as needed
 
-        response_text = "No assistant message found."
 
-        # Iterate through the messages in reverse to find the first assistant message
-        for message in messages.data:
-            print("in for")
-            print(message)
-            if message.role == 'assistant' and message.content:
-                print("in if")
-                # Assuming there is at least one content item and it has a 'text' field
-                content_item = message.content[0]
-                print(f"Content item: {content_item}")
-                response_text = content_item.text.value
-                break
+            messages = client.beta.threads.messages.list(thread_id=thread_id)
+            print(f"Messages: {messages}")
 
-        """
-        # Assuming the response is synchronous and the last message is from the assistant
-        print(f"after openai.Message.list - {messages}")
-        # print(f"after openai.Message.list - {messages}")
-        assistant_response = messages.data[0].content if messages.data else "Sorry, I couldn't process your request."
-        print(f"Assistant response: {assistant_response}")
-        response_text = assistant_response[0]['text']['value'] if assistant_response and 'text' in assistant_response[0] else "Sorry, I couldn't process your request."
-        print("ASSISTANT", assistant_response[0])
-        print(f"assistant_response - {response_text}")  
+            response_text = "No assistant message found."
 
-        
-        assistant_response = "Sorry, I couldn't process your request."
+            # Iterate through the messages in reverse to find the first assistant message
+            for message in messages.data:
+                print("in for")
+                print(message)
+                if message.role == 'assistant' and message.content:
+                    print("in if")
+                    # Assuming there is at least one content item and it has a 'text' field
+                    content_item = message.content[0]
+                    print(f"Content item: {content_item}")
+                    response_text = content_item.text.value
+                    break
 
-        # List messages in the thread
-        messages_response = client.beta.threads.messages.list(thread_id=thread_id)
-        # Assuming messages_response.data contains the messages, iterate in reverse to find the latest assistant message
-        for message in reversed(messages_response.data):
-            # Check if the message is from the assistant and has content
-            if message.role == "assistant" and message.content:
-                # Assuming the content is a list of components (text, etc.)
-                for content in message.content:
-                    if isinstance(content, dict) and "text" in content:
-                        # Return the text value of the content
-                        assistant_response = content["text"]
-        """
+        except Exception as e:
+            print(f"in except block")
+            print(f"Error: {e}")
+            response_text = "We're sorry, there was an error processing your request."
 
-        # Log the message in DynamoDB
-        messages_table.put_item(Item={
-            'from_phone_number': twilio_number,
-            'content': response_text
-        })
-
-    except Exception as e:
-        print(f"in except block")
-        print(f"Error: {e}")
-        response_text = "We're sorry, there was an error processing your request."
-
+    # Log the message in DynamoDB
+    messages_table.put_item(Item={
+        'from_phone_number': twilio_number,
+        'content': response_text
+    })
+    
     print(f"Response text: {response_text}")
     # Prepare the Twilio SMS response
-    twiml_response = MessagingResponse()
+    twiml_response =  MessagingResponse()
     print(f"Twilio response: {twiml_response}")
+    print(f"Twilio response as string: {str(twiml_response)}")
+    #time.sleep(5)
     twiml_response.message(response_text)
+    print(str(twiml_response))
 
     return {
         'statusCode': 200,
