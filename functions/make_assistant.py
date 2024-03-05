@@ -24,7 +24,7 @@ Do NOT provide recommended actions in your response. If the user asks for a sugg
 
 my_assistant = client.beta.assistants.create(
     instructions=instructions_str,
-    name="Personal Health Coach",
+    name="Guide v3",
     tools=[{"type": "retrieval"}],
     model="gpt-4-turbo-preview"
 )
