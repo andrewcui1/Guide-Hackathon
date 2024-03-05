@@ -51,7 +51,8 @@ def lambda_handler(event, context):
 
     client = openai.OpenAI()
     print(f"OpenAI client: {client}")
-
+    # Initialize the reset text to include instructions on resetting the chat
+    #reset_text = ""
 
     if sms_body == "RESET":
         # Handle the RESET command: create a new thread
@@ -96,6 +97,7 @@ def lambda_handler(event, context):
                     'open_ai_assistant_thread_id': thread_id,
                     'created_tsp': int(time.time())
                 })
+                #reset_text = "Remember can permanently reset the conversation at any time by sending the word 'RESET'."
 
             message = client.beta.threads.messages.create(
                 thread_id=thread_id,
@@ -139,6 +141,15 @@ def lambda_handler(event, context):
             print(f"in except block")
             print(f"Error: {e}")
             response_text = "We're sorry, there was an error processing your request."
+    # starter code to include a reset explination
+    """
+    # if there were no errors, and it's the first message
+    print(f"Response text: {response_text}")
+    print(f"Reset text: {reset_text}")
+    if response_text != "We're sorry, there was an error processing your request." and response_text != "No assistant message found.":
+        print("in if")
+        response_text = response_text + reset_text
+    """
 
     # Log the message in DynamoDB
     messages_table.put_item(Item={
