@@ -25,7 +25,7 @@ file = client.files.create(
 
 my_assistant = client.beta.assistants.create(
     instructions=instructions_str,
-    name="Personal Health Coach",
+    name="Guide v3",
     tools=[{"type": "retrieval"}],
     model="gpt-4-turbo-preview",
     file_ids=[file.id]
