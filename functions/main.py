@@ -15,7 +15,7 @@ cred = credentials.Certificate('../healthcoachchat-firebase-adminsdk-a1j13-a255b
 app = firebase_admin.initialize_app(cred)
 
 # Assuming the assistant is already created and its ID is known
-ASSISTANT_ID = "asst_OQTVP3y0yBqzsUtyOl5HmiHY"
+ASSISTANT_ID = "asst_TCVNZ87jHU6QvH46jRGPbEnr"
 
 # @functions_framework.http
 @https_fn.on_request()
