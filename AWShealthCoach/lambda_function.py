@@ -18,7 +18,7 @@ users_table = dynamodb.Table('HealthCoachUsers') # Adjust table name as needed
 print(f"Users Table: {users_table}")
 messages_table = dynamodb.Table('HealthCoachMessages') # Adjust table name as needed
 print(f"Messages Table: {messages_table}")
-assisstant_id = "asst_btzioFyCYSgWK2mVpVvJukOF"
+assisstant_id = "asst_TCVNZ87jHU6QvH46jRGPbEnr"
 print(f"Assistant ID: {assisstant_id}")
 
 twilio_number = "+15126018744"
