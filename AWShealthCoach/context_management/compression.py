@@ -20,12 +20,12 @@ class ContextCompressor:
 
         #TODO we can experiment with these args
         splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
-        relevance_filter = EmbeddingsFilter(embeddings=self.embeddings, similarity_threshold=0.78)
+        relevance_filter = EmbeddingsFilter(embeddings=self.embeddings, similarity_threshold=0.5)
         pipeline_compressor = DocumentCompressorPipeline(
-            transformers=[splitter, relevance_filter]
+            transformers=[relevance_filter]
         )
-        texts = splitter.create_documents(self.documents)
-        retriever = FAISS.from_documents(texts, self.embeddings).as_retriever()
+        print(self.documents)
+        retriever = FAISS.from_documents(self.documents, self.embeddings).as_retriever()
         contextual_retriever = ContextualCompressionRetriever(
             base_compressor=pipeline_compressor, base_retriever=retriever
         )

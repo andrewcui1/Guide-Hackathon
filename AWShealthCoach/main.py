@@ -10,23 +10,18 @@ from langchain.schema import Document
 
 
 
-def ingest_documents(file_path: str) -> str:
+def ingest_documents(file_path: str) -> Document:
     loader = PyPDFLoader(file_path)
     pages = loader.load_and_split()
-    raw_text = ""
 
-    for i in range(len(pages) - 1):
-        raw_text += pages[i].page_content
-
-    return raw_text
+    return pages
 
 def pratik_patel_response(user_message: str, embedding_provider: str = "openai") -> str:
 
     instruct_prompt = pratik_patel_instruct()
-    document_raw = ingest_documents('text_corpus/survey_questions_and_answers.pdf')
-    print(document_raw)
+    documents = ingest_documents('text_corpus/survey_questions_and_answers.pdf')
     memory = Memory(embedding_provider)
-    context = ContextCompressor(documents=document_raw, embeddings=memory.get_embeddings())
+    context = ContextCompressor(documents=documents, embeddings=memory.get_embeddings())
 
     #TODO adjust max_results arg as needed
     relevant_context = context.get_context(user_message, max_results=5)
@@ -36,8 +31,4 @@ def pratik_patel_response(user_message: str, embedding_provider: str = "openai")
         {"role": "user", "content": relevant_context},
         {"role": "user", "content": user_message},
     ]
-
     return generate_response(messages=message)
-
-response = pratik_patel_response('Im trying to remember in the survey questions i answered what my starting numbers were. Can you tell me?')
-print(response)
