@@ -1,4 +1,3 @@
-from .retriever import Retriever
 from langchain.retrievers import (
     ContextualCompressionRetriever,
 )
@@ -24,9 +23,7 @@ class ContextCompressor:
         pipeline_compressor = DocumentCompressorPipeline(
             transformers=[splitter, relevance_filter]
         )
-        base_retriever = Retriever(
-            pages=self.documents
-        )
+        pages=self.documents
         contextual_retriever = ContextualCompressionRetriever(
             base_compressor=pipeline_compressor, base_retriever=base_retriever
         )
@@ -34,7 +31,6 @@ class ContextCompressor:
 
     def _pretty_print_docs(self, docs, top_n):
         return f"\n".join(f"Source: {d.metadata.get('source')}\n"
-                          f"Title: {d.metadata.get('title')}\n"
                           f"Content: {d.page_content}\n"
                           for i, d in enumerate(docs) if i < top_n)
 
