@@ -6,6 +6,7 @@ from langchain.retrievers.document_compressors import (
     EmbeddingsFilter,
 )
 from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain_community.vectorstores import FAISS
 
 
 class ContextCompressor:
@@ -23,9 +24,10 @@ class ContextCompressor:
         pipeline_compressor = DocumentCompressorPipeline(
             transformers=[splitter, relevance_filter]
         )
-        pages=self.documents
+        texts = splitter.create_documents(self.documents)
+        retriever = FAISS.from_documents(texts, self.embeddings).as_retriever()
         contextual_retriever = ContextualCompressionRetriever(
-            base_compressor=pipeline_compressor, base_retriever=base_retriever
+            base_compressor=pipeline_compressor, base_retriever=retriever
         )
         return contextual_retriever
 
