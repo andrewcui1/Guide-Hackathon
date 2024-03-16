@@ -24,7 +24,6 @@ class ContextCompressor:
         pipeline_compressor = DocumentCompressorPipeline(
             transformers=[relevance_filter]
         )
-        print(self.documents)
         retriever = FAISS.from_documents(self.documents, self.embeddings).as_retriever()
         contextual_retriever = ContextualCompressionRetriever(
             base_compressor=pipeline_compressor, base_retriever=retriever

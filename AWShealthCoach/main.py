@@ -10,16 +10,21 @@ from langchain.schema import Document
 
 
 
-def ingest_documents(file_path: str) -> Document:
-    loader = PyPDFLoader(file_path)
-    pages = loader.load_and_split()
-
-    return pages
+def ingest_documents(file_paths: List[str]) -> List[Document]:
+    documents_list = []
+    for file_path in file_paths:
+        if file_path.endswith('.pdf'):
+            loader = PyPDFLoader(file_path)
+            pages = loader.load_and_split()
+            documents_list.extend(pages)
+        else:
+            raise ValueError(f"File {file_path} must be a PDF.")
+    return documents_list
 
 def pratik_patel_response(user_message: str, embedding_provider: str = "openai") -> str:
 
     instruct_prompt = pratik_patel_instruct()
-    documents = ingest_documents('text_corpus/survey_questions_and_answers.pdf')
+    documents = ingest_documents(['text_corpus/survey_questions_and_answers.pdf'])
     memory = Memory(embedding_provider)
     context = ContextCompressor(documents=documents, embeddings=memory.get_embeddings())
 
